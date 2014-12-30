@@ -35,10 +35,10 @@ Then you can use `cachedRequest` just as you use [request](https://github.com/re
 ###Passing a callback
 ```javascript
 cachedRequest(options, function (error, response, body) {
-    if (error) {
-        //Handle request error
-    }
-    //Do what you need with `response` and `body`
+  if (error) {
+    //Handle request error
+  }
+  //Do what you need with `response` and `body`
 });
 ```
 
@@ -53,12 +53,12 @@ When making a request, you must pass an `options` object as you can observe in t
 - `ttl`: Number of milliseconds for the cached response to be considered stale.
 
     ```javascript
-var options = {
-    url: "https://www.google.com",
-    ttl: 3000 //3 seconds
-};
-cachedRequest(options, callback);
-```
+      var options = {
+        url: "https://www.google.com",
+        ttl: 3000 //3 seconds
+      };
+      cachedRequest(options, callback);
+    ```
 
 ##Can I use everything that comes with **request**?
 No, there's some things you can't use. For example, the shortcut functions `.get`, `.post`, `.put`, etc. are not available in **cached-request**. If you'd like to have them, this is a great opportunity to contribute!
