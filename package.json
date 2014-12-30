@@ -4,7 +4,7 @@
   "description": "Node.js module to perform HTTP requests with caching support",
   "author": "Daniel López <danypype@gmail.com>",
   "scripts": {
-    "test": "./mode_modules/.bin/mocha",
+    "test": "./node_modules/.bin/mocha"
   },
   "main": "./lib/index.js",
   "repository": {
@@ -20,7 +20,13 @@
     "caching"
   ],
   "dependencies": {
+    "graceful-fs": "^3.0.5"
   },
   "devDependencies": {
+    "chai": "^1.10.0",
+    "execSync": "^1.0.2",
+    "mocha": "^2.1.0",
+    "nock": "^0.52.4",
+    "request": "^2.51.0"
   }
 }
