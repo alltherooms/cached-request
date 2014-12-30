@@ -1,7 +1,7 @@
 #cached-request
 Node.js module to perform HTTP requests with caching support.
 
-#Why?
+##Why?
 At [alltherooms](http://alltherooms.com/) we make lots of requests to external APIs, and caching is crucial to provide a good experience to our users. We also love streams! however, we had a hard time finding a good tool for caching HTTP responses and streaming them at the same time, so we wrote **cached-request**. We hope to help others, and feedback is always welcome. :)
 
 ##How it works
