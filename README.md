@@ -21,7 +21,7 @@ $ npm install cached-request
 
 ##Usage
 First, you must set it up:
-```
+```javascript
 var request = require('request')
 ,   cachedRequest = require('cached-request')(request)
 ,   cacheDirectory = "/tmp/cache";
