@@ -1,7 +1,7 @@
 var CachedRequest = require("../")
 ,   request = require("request")
 ,   nock = require("nock")
-,   sh = require("execSync")
+,   temp = require('temp').track()
 ,   Readable = require("stream").Readable
 ,   util = require("util");
 
@@ -18,7 +18,7 @@ MockedResponseStream.prototype._read = function (size) {
 };
 
 describe("CachedRequest", function () {
-  var cacheDir = __dirname + "/cache";
+  var cacheDir;
 
   function mock (method, times, response) {
     method = method.toLowerCase();
@@ -31,12 +31,11 @@ describe("CachedRequest", function () {
   };
 
   before(function () {
-    sh.exec("mkdir " +  cacheDir);
     nock.disableNetConnect();
   });
 
   beforeEach(function () {
-    sh.exec("rm " +  cacheDir + "/*");
+    cacheDir = temp.mkdirSync("cache");
     this.cachedRequest = CachedRequest(request);
     this.cachedRequest.setCacheDirectory(cacheDir);
   });
@@ -130,6 +129,6 @@ describe("CachedRequest", function () {
   });
 
   after(function () {
-    sh.exec("rm -rf " +  cacheDir);
+    temp.cleanupSync();
   });
 });

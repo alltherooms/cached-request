@@ -24,9 +24,9 @@
   },
   "devDependencies": {
     "chai": "^1.10.0",
-    "execSync": "^1.0.2",
     "mocha": "^2.1.0",
     "nock": "^0.52.4",
-    "request": "^2.51.0"
+    "request": "^2.51.0",
+    "temp": "^0.8.1"
   }
 }
