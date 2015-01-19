@@ -1,9 +1,10 @@
 var CachedRequest = require("../")
 ,   request = require("request")
 ,   nock = require("nock")
-,   sh = require("execSync")
+,   temp = require('temp').track()
 ,   Readable = require("stream").Readable
-,   util = require("util");
+,   util = require("util")
+,   zlib = require("zlib");
 
 util.inherits(MockedResponseStream, Readable);
 
@@ -18,25 +19,24 @@ MockedResponseStream.prototype._read = function (size) {
 };
 
 describe("CachedRequest", function () {
-  var cacheDir = __dirname + "/cache";
+  var cacheDir;
 
-  function mock (method, times, response) {
+  function mock (method, times, response, headers) {
     method = method.toLowerCase();
     times = times || 1;
     nock("http://ping.com")
       .filteringPath(/.+/, "/")
       [method]("/")
       .times(times)
-      .reply(200, response);
+      .reply(200, response, headers);
   };
 
   before(function () {
-    sh.exec("mkdir " +  cacheDir);
     nock.disableNetConnect();
   });
 
   beforeEach(function () {
-    sh.exec("rm " +  cacheDir + "/*");
+    cacheDir = temp.mkdirSync("cache");
     this.cachedRequest = CachedRequest(request);
     this.cachedRequest.setCacheDirectory(cacheDir);
   });
@@ -127,9 +127,52 @@ describe("CachedRequest", function () {
         });
       });
     });
+
+    it("handles gzip response", function (done) {
+      var self = this;
+      var responseBody = "";
+
+      for (var i = 0; i < 1000; i++) {
+        responseBody += "this is a long response body";
+      };
+
+      //Return gzip compressed response with valid content encoding header
+      mock("GET", 1, function () {
+        return new MockedResponseStream({}, responseBody).pipe(zlib.createGzip());
+      }, 
+      {
+        "Content-Encoding": "gzip"
+      });
+
+      var options = {url: "http://ping.com/", ttl: 5000};
+      var body = "";
+
+      //Make fresh request
+      this.cachedRequest(options)
+      .on("data", function (data) {
+        //Ignore first reply
+      })
+      .on("end", function () {
+        body = "";
+        //Make cached request
+        self.cachedRequest(options)
+        .on("response", function (response) {
+          expect(response.statusCode).to.equal(200);
+          expect(response.headers["x-from-cache"]).to.equal(1);
+          expect(response.headers["content-encoding"]).to.equal("gzip");
+          response.on("data", function (data) {
+            body += data;
+          })
+          .on("end", function () {
+            expect(body).to.equal(responseBody);
+            done();
+          });
+        });
+      });
+    });
   });
 
   after(function () {
-    sh.exec("rm -rf " +  cacheDir);
+    temp.cleanupSync();
   });
 });
