@@ -108,6 +108,7 @@ describe("CachedRequest", function () {
         if (error) return done(error);
         expect(response.statusCode).to.equal(200);
         expect(response.headers["x-from-cache"]).to.not.exist;
+
         zlib.gunzip(body, function (error, buffer) {
           if (error) return done(error);
           expect(buffer.toString()).to.deep.equal(responseBody);
@@ -188,26 +189,36 @@ describe("CachedRequest", function () {
 
       //Make fresh request
       this.cachedRequest(options)
-      .on("data", function (data) {
-        //Ignore first reply
-      })
-      .on("end", function () {
-        body = "";
-        //Make cached request
-        self.cachedRequest(options)
-        .on("response", function (response) {
-          expect(response.statusCode).to.equal(200);
-          expect(response.headers["x-from-cache"]).to.equal(1);
-          expect(response.headers["content-encoding"]).to.equal("gzip");
-          response.on("data", function (data) {
-            body += data;
-          })
-          .on("end", function () {
-            expect(body).to.equal(responseBody);
-            done();
-          });
+        .on("data", function (data) {
+          //Ignore first reply
+        })
+        .on("end", function () {
+          body = "";
+          //Make cached request
+          self.cachedRequest(options)
+            .on("response", function (response) {
+              expect(response.statusCode).to.equal(200);
+              expect(response.headers["x-from-cache"]).to.equal(1);
+              expect(response.headers["content-encoding"]).to.equal("gzip");
+
+              var gunzip = zlib.createGunzip();
+              gunzip.on("data", function (data) {
+                body += data.toString();
+              });
+
+              gunzip.on("end", function () {
+                expect(body).to.equal(responseBody);
+                done();
+              });
+
+              gunzip.on('error', function (error) {
+                done(error);
+              });
+
+              response.pipe(gunzip);
+            });
+
         });
-      });
     });
   });
 
