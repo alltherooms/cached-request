@@ -86,6 +86,46 @@ describe("CachedRequest", function () {
         });
       });
     });
+
+    it("responds the same from the cache if gzipped", function (done) {
+      var self = this;
+      var responseBody = 'foo';
+      var options = {
+        url: "http://ping.com/",
+        ttl: 5000,
+        encoding: null // avoids messing with gzip responses so we can handle them
+      };
+
+      //Return gzip compressed response with valid content encoding header
+      mock("GET", 1, function () {
+        return new MockedResponseStream({}, responseBody).pipe(zlib.createGzip());
+      },
+      {
+        "Content-Encoding": "gzip"
+      });
+
+      this.cachedRequest(options, function (error, response, body) {
+        if (error) return done(error);
+        expect(response.statusCode).to.equal(200);
+        expect(response.headers["x-from-cache"]).to.not.exist;
+
+        zlib.gunzip(body, function (error, buffer) {
+          if (error) return done(error);
+          expect(buffer.toString()).to.deep.equal(responseBody);
+
+          self.cachedRequest(options, function (error, response, body) {
+            if (error) return done(error);
+            expect(response.statusCode).to.equal(200);
+            expect(response.headers["x-from-cache"]).to.equal(1);
+            zlib.gunzip(body, function (error, buffer) {
+              if (error) done(error);
+              expect(buffer.toString()).to.deep.equal(responseBody);
+              done();
+            });
+          });
+        });
+      });
+    });
   });
 
   describe("streaming", function () {
@@ -149,26 +189,36 @@ describe("CachedRequest", function () {
 
       //Make fresh request
       this.cachedRequest(options)
-      .on("data", function (data) {
-        //Ignore first reply
-      })
-      .on("end", function () {
-        body = "";
-        //Make cached request
-        self.cachedRequest(options)
-        .on("response", function (response) {
-          expect(response.statusCode).to.equal(200);
-          expect(response.headers["x-from-cache"]).to.equal(1);
-          expect(response.headers["content-encoding"]).to.equal("gzip");
-          response.on("data", function (data) {
-            body += data;
-          })
-          .on("end", function () {
-            expect(body).to.equal(responseBody);
-            done();
-          });
+        .on("data", function (data) {
+          //Ignore first reply
+        })
+        .on("end", function () {
+          body = "";
+          //Make cached request
+          self.cachedRequest(options)
+            .on("response", function (response) {
+              expect(response.statusCode).to.equal(200);
+              expect(response.headers["x-from-cache"]).to.equal(1);
+              expect(response.headers["content-encoding"]).to.equal("gzip");
+
+              var gunzip = zlib.createGunzip();
+              gunzip.on("data", function (data) {
+                body += data.toString();
+              });
+
+              gunzip.on("end", function () {
+                expect(body).to.equal(responseBody);
+                done();
+              });
+
+              gunzip.on('error', function (error) {
+                done(error);
+              });
+
+              response.pipe(gunzip);
+            });
+
         });
-      });
     });
   });
 
