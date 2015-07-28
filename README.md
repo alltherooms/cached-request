@@ -60,6 +60,13 @@ When making a request, you must pass an `options` object as you can observe in t
       cachedRequest(options, callback);
     ```
 
+    You can also set a global ttl option for all requests:
+
+    ```javascript
+    cachedRequest.set('ttl', 1000);
+    cachedRequest({url: 'https://www.google.com'}, callback); // should benefit from the cache if previously cached
+    ```
+
 ##Can I use everything that comes with **request**?
 No, there's some things you can't use. For example, the shortcut functions `.get`, `.post`, `.put`, etc. are not available in **cached-request**. If you'd like to have them, this is a great opportunity to contribute!
 
