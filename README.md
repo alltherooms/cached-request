@@ -26,7 +26,7 @@ var request = require('request')
 ,   cachedRequest = require('cached-request')(request)
 ,   cacheDirectory = "/tmp/cache";
 
-cacheRequest.setCacheDirectory(cacheDirectory);
+cachedRequest.setCacheDirectory(cacheDirectory);
 ```
 _Note_: You have to ensure the user that launches the process has read+write permissions over `cacheDirectory`, otherwise the program will fail.
 
