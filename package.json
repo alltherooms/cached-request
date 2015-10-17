@@ -6,7 +6,7 @@
   "scripts": {
     "test": "mocha"
   },
-  "main": "./lib/index.js",
+  "main": "./lib/cached-request.js",
   "repository": {
     "type": "git",
     "url": "https://github.com/alltherooms/cached-request"
