@@ -55,7 +55,52 @@ describe("CachedRequest", function () {
       });
     });
 
+    it("makes the request when the response isn't cached using the get extension method", function (done) {
+      mock("GET", 1, function () {
+        return new MockedResponseStream({}, "pong");
+      });
+      this.cachedRequest.get({uri: "http://ping.com/", ttl: 0, method: 'GET'}, function (error, response, body) {
+        if (error) return done(error);
+        expect(response.statusCode).to.equal(200);
+        expect(response.headers["x-from-cache"]).to.not.exist;
+        expect(body).to.equal("pong");
+        done();
+      });
+    });
+
     it("responds from the cache", function (done) {
+      var self = this;
+      var responseBody = {"a": 1, "b": {"c": 2}};
+      var options = {
+        uri: "http://ping.com/",
+        method: "POST",
+        json: {
+          a: 1
+        },
+        ttl: 5000
+      };
+
+      mock(options.method, 1, function () {
+        return new MockedResponseStream({}, JSON.stringify(responseBody));
+      });
+
+      this.cachedRequest(options, function (error, response, body) {
+        if (error) return done(error);
+        expect(response.statusCode).to.equal(200);
+        expect(response.headers["x-from-cache"]).to.not.exist;
+        expect(body).to.deep.equal(responseBody);
+
+        self.cachedRequest(options, function (error, response, body) {
+          if (error) return done(error);
+          expect(response.statusCode).to.equal(200);
+          expect(response.headers["x-from-cache"]).to.equal(1);
+          expect(body).to.deep.equal(responseBody);
+          done();
+        });
+      });
+    });
+
+    it("responds from the cache using get extension method", function (done) {
       var self = this;
       var responseBody = {"a": 1, "b": {"c": 2}};
       var options = {
@@ -146,6 +191,45 @@ describe("CachedRequest", function () {
 
       //Make fresh request
       this.cachedRequest(options)
+      .on("data", function (data) {
+          body += data;
+      })
+      .on("end", function () {
+        expect(body).to.equal(responseBody);
+        body = "";
+        //Make cached request
+        self.cachedRequest(options)
+        .on("response", function (response) {
+          expect(response.statusCode).to.equal(200);
+          expect(response.headers["x-from-cache"]).to.equal(1);
+          response.on("data", function (data) {
+            body += data;
+          })
+          .on("end", function () {
+            expect(body).to.equal(responseBody);
+            done();
+          });
+        });
+      });
+    });
+
+    it("allows to use request with get extension method as a stream", function (done) {
+      var self = this;
+      var responseBody = "";
+
+      for (var i = 0; i < 1000; i++) {
+        responseBody += "this is a long response body";
+      };
+
+      mock("GET", 1, function () {
+        return new MockedResponseStream({}, responseBody);
+      });
+
+      var options = {url: "http://ping.com/", ttl: 5000};
+      var body = "";
+
+      //Make fresh request
+      this.cachedRequest.get(options)
       .on("data", function (data) {
           body += data;
       })
