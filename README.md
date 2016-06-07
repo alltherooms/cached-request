@@ -63,7 +63,7 @@ When making a request, you must pass an `options` object as you can observe in t
     You can also set a global ttl option for all requests:
 
     ```javascript
-    cachedRequest.set('ttl', 1000);
+    cachedRequest.setValue('ttl', 1000);
     cachedRequest({url: 'https://www.google.com'}, callback); // should benefit from the cache if previously cached
     ```
 
