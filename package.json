@@ -20,7 +20,7 @@
     "caching"
   ],
   "dependencies": {
-    "graceful-fs": "^3.0.5",
+    "graceful-fs": "^4.0.0",
     "mkdirp": "^0.5.1"
   },
   "devDependencies": {
