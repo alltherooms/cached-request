@@ -20,7 +20,8 @@
     "caching"
   ],
   "dependencies": {
-    "graceful-fs": "^4.0.0"
+    "graceful-fs": "^4.0.0",
+    "mkdirp": "^0.5.1"
   },
   "devDependencies": {
     "chai": "^1.10.0",
