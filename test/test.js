@@ -39,7 +39,12 @@ describe("CachedRequest", function () {
     cacheDir = temp.mkdirSync("cache");
     this.cachedRequest = CachedRequest(request);
     this.cachedRequest.setCacheDirectory(cacheDir);
+    nock.cleanAll();
   });
+
+  afterEach(function (done) {
+    temp.cleanup(done);
+  })
 
   describe("caching", function () {
     it("makes the request when the response isn't cached", function (done) {
@@ -122,6 +127,43 @@ describe("CachedRequest", function () {
               expect(buffer.toString()).to.deep.equal(responseBody);
               done();
             });
+          });
+        });
+      });
+    });
+
+    describe('when cannot parse the cached response headers', function () {
+      after(function () {
+        if (this._parseHeaders) {
+          this.cachedRequest.set('parseHeaders', this._parseHeaders);
+        }
+      });
+
+      it("makes the request", function (done) {
+        var self = this;
+        var options = {uri: "http://ping.com/", ttl: 5000};
+
+        mock("GET", 2, function () {
+          return new MockedResponseStream({}, "pong");
+        }, {foo: 'bar'});
+
+        this.cachedRequest(options, function (error, response, body) {
+          if (error) return done(error);
+          expect(response.statusCode).to.equal(200);
+          expect(response.headers["x-from-cache"]).to.not.exist;
+          expect(body).to.equal("pong");
+
+          self._parseHeaders = self.cachedRequest.get('parseHeaders');
+          self.cachedRequest.set('parseHeaders', function () {
+            throw new Error('Cannot parse headers');
+          });
+
+          self.cachedRequest(options, function (error, response, body) {
+            if (error) return done(error);
+            expect(response.statusCode).to.equal(200);
+            expect(response.headers["x-from-cache"]).to.not.exist;
+            expect(body).to.equal("pong");
+            done();
           });
         });
       });
@@ -220,9 +262,5 @@ describe("CachedRequest", function () {
 
         });
     });
-  });
-
-  after(function () {
-    temp.cleanupSync();
   });
 });
