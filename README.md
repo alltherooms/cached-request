@@ -5,7 +5,7 @@ Node.js module to perform HTTP requests with caching support.
 At [alltherooms](http://alltherooms.com/) we make lots of requests to external APIs, and caching is crucial to provide a good experience to our users. We also love streams! however, we had a hard time finding a good tool for caching HTTP responses and streaming them at the same time, so we wrote **cached-request**. We hope to help others, and feedback is always welcome. :)
 
 ##How it works
-This tool was made to work with the popular [request](https://github.com/request/request) module, which simplifies the HTTP requests in Node.js. Therefore, this must be consireded a wrapper around **request**.
+This tool was made to work with the popular [request](https://github.com/request/request) module, which simplifies the HTTP requests in Node.js. Therefore, this must be considered a wrapper around **request**.
 
 First, you instantiate a **cachedRequest** instance by passing a **request** function, which is going to act as the requester for the uncached requests - you still need to `$npm install request` independently. - Then, you can use **cachedRequest** to perform your HTTP requests.
 
