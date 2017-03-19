@@ -9,7 +9,7 @@ This tool was made to work with the popular [request](https://github.com/request
 
 First, you instantiate a **cachedRequest** instance by passing a **request** function, which is going to act as the requester for the uncached requests - you still need to `$npm install request` independently. - Then, you can use **cachedRequest** to perform your HTTP requests.
 
-The caching takes place in the filesystem, storing the responses as compressed gzipped files.
+The caching takes place in the filesystem, storing the responses as compressed gzipped files by default.
 
 Please note this will cache *everything*, so don't use it for making things like POST or PUT requests that you don't want to be cached.
 
@@ -65,6 +65,16 @@ When making a request, you must pass an `options` object as you can observe in t
     ```javascript
     cachedRequest.setValue('ttl', 1000);
     cachedRequest({url: 'https://www.google.com'}, callback); // should benefit from the cache if previously cached
+    ```
+
+- `gzipResponse`: Flag to store responses as gzipped files on the filesystem. Default = true. Adds a `_gzipResponse` flag to the json headers file. 
+
+    ```javascript
+      var options = {
+        url: "https://www.google.com",
+        gzipResponse: false // downloaded files will not be gzipped when saved
+      };
+      cachedRequest(options, callback);
     ```
 
 ##Can I use everything that comes with **request**?

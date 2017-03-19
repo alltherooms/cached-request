@@ -4,7 +4,11 @@ var CachedRequest = require("../")
 ,   temp = require('temp').track()
 ,   Readable = require("stream").Readable
 ,   util = require("util")
-,   zlib = require("zlib");
+,   zlib = require("zlib")
+,   mmm = require('mmmagic')
+,   Magic = mmm.Magic
+,   path = require('path')
+,   fs = require('fs');
 
 util.inherits(MockedResponseStream, Readable);
 
@@ -171,6 +175,132 @@ describe("CachedRequest", function () {
         });
       });
     });
+
+    it("stores response un-gzip'd when gzipResponse option is disabled", function (done) {
+      var self = this;
+      var responseBody = {"a": 1, "b": {"c": 2}};
+      var options = {
+        uri: "http://ping.com/",
+        method: "POST",
+        json: {
+          a: 1
+        },
+        ttl: 5000,
+        gzipResponse: false
+      };
+
+      mock(options.method, 1, function () {
+        return new MockedResponseStream({}, JSON.stringify(responseBody));
+      });
+
+      this.cachedRequest(options, function (error, response, body) {
+        if (error) return done(error);
+        expect(response.statusCode).to.equal(200);
+        expect(response.headers["x-from-cache"]).to.not.exist;
+        expect(body).to.deep.equal(responseBody);
+        var magic = new Magic(mmm.MAGIC_MIME_TYPE)
+        ,   cacheDir = self.cachedRequest.getValue('cacheDirectory')
+        ,   basename = self.cachedRequest.getValue('hashKey')(JSON.stringify(self.cachedRequest.getValue('normalizeOptions')(options)))
+        ,   filepath = cacheDir + basename
+        ,   metaFilepath = filepath + '.json';
+
+        // wait for JSON file to written + flushed
+        setTimeout(function(){
+            var meta = JSON.parse(fs.readFileSync(metaFilepath));
+
+            expect(meta._gzipResponse).to.equal(false);
+
+            magic.detectFile(filepath, function(err, result) {
+                if (err) throw err;
+                expect(result).to.equal('text/plain');
+                done();
+            });
+         }, 25);
+      });
+    });
+
+    it("stores response gzip'd when gzipResponse option is omitted", function (done) {
+      var self = this;
+      var responseBody = {"a": 1, "b": {"c": 2}};
+      var options = {
+        uri: "http://ping.com/",
+        method: "POST",
+        json: {
+          a: 1
+        },
+        ttl: 5000
+      };
+
+      mock(options.method, 1, function () {
+        return new MockedResponseStream({}, JSON.stringify(responseBody));
+      });
+
+      this.cachedRequest(options, function (error, response, body) {
+        if (error) return done(error);
+        expect(response.statusCode).to.equal(200);
+        expect(response.headers["x-from-cache"]).to.not.exist;
+        expect(body).to.deep.equal(responseBody);
+        var magic = new Magic(mmm.MAGIC_MIME_TYPE)
+        ,   cacheDir = self.cachedRequest.getValue('cacheDirectory')
+        ,   basename = self.cachedRequest.getValue('hashKey')(JSON.stringify(self.cachedRequest.getValue('normalizeOptions')(options)))
+        ,   filepath = cacheDir + basename
+        ,   metaFilepath = filepath + '.json';
+
+        // wait for JSON file to written + flushed
+        setTimeout(function(){ 
+            var meta = JSON.parse(fs.readFileSync(metaFilepath));
+
+            expect(meta._gzipResponse).to.equal(true);
+
+            magic.detectFile(filepath, function(err, result) {
+                if (err) throw err;
+                expect(result).to.equal('application/x-gzip'); 
+                done();
+            });
+         }, 25);
+      });
+    });
+
+    it("responds the same from the cache if gzipResponse option is enabled", function (done) {
+      var self = this;
+      var responseBody = 'foo';
+      var options = {
+        url: "http://ping.com/",
+        ttl: 5000,
+        encoding: null, // avoids messing with gzip responses so we can handle them
+        gzipResponse: true 
+      };
+
+      //Return gzip compressed response with valid content encoding header
+      mock("GET", 1, function () {
+        return new MockedResponseStream({}, responseBody).pipe(zlib.createGzip());
+      },
+      {
+        "Content-Encoding": "gzip"
+      });
+
+      this.cachedRequest(options, function (error, response, body) {
+        if (error) return done(error);
+        expect(response.statusCode).to.equal(200);
+        expect(response.headers["x-from-cache"]).to.not.exist;
+
+        zlib.gunzip(body, function (error, buffer) {
+          if (error) return done(error);
+          expect(buffer.toString()).to.deep.equal(responseBody);
+
+          self.cachedRequest(options, function (error, response, body) {
+            if (error) return done(error);
+            expect(response.statusCode).to.equal(200);
+            expect(response.headers["x-from-cache"]).to.equal(1);
+            zlib.gunzip(body, function (error, buffer) {
+              if (error) done(error);
+              expect(buffer.toString()).to.deep.equal(responseBody);
+              done();
+            });
+          });
+        });
+      });
+    });
   });
 
   describe("streaming", function () {
@@ -187,6 +317,45 @@ describe("CachedRequest", function () {
       });
 
       var options = {url: "http://ping.com/", ttl: 5000};
+      var body = "";
+
+      //Make fresh request
+      this.cachedRequest(options)
+      .on("data", function (data) {
+          body += data;
+      })
+      .on("end", function () {
+        expect(body).to.equal(responseBody);
+        body = "";
+        //Make cached request
+        self.cachedRequest(options)
+        .on("response", function (response) {
+          expect(response.statusCode).to.equal(200);
+          expect(response.headers["x-from-cache"]).to.equal(1);
+          response.on("data", function (data) {
+            body += data;
+          })
+          .on("end", function () {
+            expect(body).to.equal(responseBody);
+            done();
+          });
+        });
+      });
+    });
+
+    it("allows to use request as a stream when gzipResponse option is disabled", function (done) {
+      var self = this;
+      var responseBody = "";
+
+      for (var i = 0; i < 1000; i++) {
+        responseBody += "this is a long response body";
+      };
+
+      mock("GET", 1, function () {
+        return new MockedResponseStream({}, responseBody);
+      });
+
+      var options = {url: "http://ping.com/", ttl: 5000, gzipResponse: false};
       var body = "";
 
       //Make fresh request
