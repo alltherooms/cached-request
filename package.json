@@ -1,6 +1,6 @@
 {
   "name": "cached-request",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Node.js module to perform HTTP requests with caching support",
   "author": "Daniel López <danypype@gmail.com>",
   "scripts": {
