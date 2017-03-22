@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/alltherooms/cached-request.svg?branch=master)](https://travis-ci.org/alltherooms/cached-request)
+
 #cached-request
 Node.js module to perform HTTP requests with caching support.
 
