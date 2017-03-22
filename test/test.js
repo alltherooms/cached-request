@@ -180,7 +180,7 @@ describe("CachedRequest", function () {
     describe('when cannot parse the cached response headers', function () {
       after(function () {
         if (this._parseHeaders) {
-          this.cachedRequest.set('parseHeaders', this._parseHeaders);
+          this.cachedRequest.setValue('parseHeaders', this._parseHeaders);
         }
       });
 
@@ -198,8 +198,8 @@ describe("CachedRequest", function () {
           expect(response.headers["x-from-cache"]).to.not.exist;
           expect(body).to.equal("pong");
 
-          self._parseHeaders = self.cachedRequest.get('parseHeaders');
-          self.cachedRequest.set('parseHeaders', function () {
+          self._parseHeaders = self.cachedRequest.getValue('parseHeaders');
+          self.cachedRequest.setValue('parseHeaders', function () {
             throw new Error('Cannot parse headers');
           });
 
