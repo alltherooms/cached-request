@@ -105,7 +105,7 @@ describe("CachedRequest", () => {
       const responseBody = {"a": 1, "b": {"c": 2}};
       const options = {
         uri: "http://ping.com/",
-        method: "POST",
+        method: "GET",
         json: {
           a: 1
         },
@@ -116,13 +116,13 @@ describe("CachedRequest", () => {
         return new MockedResponseStream({}, JSON.stringify(responseBody));
       });
 
-      this.cachedRequest(options, (error, response, body) => {
+      this.cachedRequest.get(options, (error, response, body) => {
         if (error) return done(error);
         expect(response.statusCode).to.equal(200);
         expect(response.headers["x-from-cache"]).to.not.exist;
         expect(body).to.deep.equal(responseBody);
 
-        this.cachedRequest(options, (error, response, body) => {
+        this.cachedRequest.get(options, (error, response, body) => {
           if (error) return done(error);
           expect(response.statusCode).to.equal(200);
           expect(response.headers["x-from-cache"]).to.equal(1);
