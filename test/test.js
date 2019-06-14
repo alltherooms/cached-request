@@ -71,13 +71,37 @@ describe("CachedRequest", () => {
     });
 
     it("responds from the cache", function (done) {
+      const responseBody = "pong";
+      const options = {
+        uri: "http://ping.com/",
+        method: "GET",
+        ttl: 1000,
+      };
+
+      mock(options.method, 1, () => new MockedResponseStream({}, responseBody));
+
+      this.cachedRequest(options, (error, response, body) => {
+        if (error) return done(error);
+        expect(response.statusCode).to.equal(200);
+        expect(response.headers["x-from-cache"]).to.not.exist;
+        expect(body).to.equal(responseBody);
+
+        this.cachedRequest(options, (error, response, body) => {
+          if (error) return done(error);
+          expect(response.statusCode).to.equal(200);
+          expect(response.headers["x-from-cache"]).to.equal(1);
+          expect(body).to.equal(responseBody);
+          done();
+        });
+      });
+    });
+
+    it("parses JSON objects from the cache", function (done) {
       const responseBody = {"a": 1, "b": {"c": 2}};
       const options = {
         uri: "http://ping.com/",
         method: "POST",
-        json: {
-          a: 1
-        },
+        json: true,
         ttl: 5000
       };
 
@@ -106,9 +130,7 @@ describe("CachedRequest", () => {
       const options = {
         uri: "http://ping.com/",
         method: "GET",
-        json: {
-          a: 1
-        },
+        json: true,
         ttl: 5000
       };
 
@@ -137,7 +159,39 @@ describe("CachedRequest", () => {
       const options = {
         url: "http://ping.com/",
         ttl: 5000,
-        encoding: null // avoids messing with gzip responses so we can handle them
+        gzip: true,
+      };
+
+      //Return gzip compressed response with valid content encoding header
+      mock("GET", 1, () => {
+        return new MockedResponseStream({}, responseBody).pipe(zlib.createGzip());
+      },
+      {
+        "Content-Encoding": "gzip"
+      });
+
+      this.cachedRequest(options, (error, response, body) => {
+        if (error) return done(error);
+        expect(response.statusCode).to.equal(200);
+        expect(response.headers["x-from-cache"]).to.not.exist;
+        expect(body).to.deep.equal(responseBody);
+
+        this.cachedRequest(options, (error, response, body) => {
+          if (error) return done(error);
+          expect(response.statusCode).to.equal(200);
+          expect(response.headers["x-from-cache"]).to.equal(1);
+          expect(body).to.deep.equal(responseBody);
+          done();
+        });
+      });
+    });
+
+    it("responds a buffer from the cache", function (done) {
+      const responseBody = 'foo';
+      const options = {
+        url: "http://ping.com/",
+        ttl: 5000,
+        encoding: null // body will be returned as a buffer
       };
 
       //Return gzip compressed response with valid content encoding header
@@ -155,6 +209,7 @@ describe("CachedRequest", () => {
 
         zlib.gunzip(body, (error, buffer) => {
           if (error) return done(error);
+          expect(buffer).to.be.an.instanceof(Buffer);
           expect(buffer.toString()).to.deep.equal(responseBody);
 
           this.cachedRequest(options, (error, response, body) => {
@@ -163,6 +218,7 @@ describe("CachedRequest", () => {
             expect(response.headers["x-from-cache"]).to.equal(1);
             zlib.gunzip(body, (error, buffer) => {
               if (error) done(error);
+              expect(buffer).to.be.an.instanceof(Buffer);
               expect(buffer.toString()).to.deep.equal(responseBody);
               done();
             });
