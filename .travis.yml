@@ -2,7 +2,3 @@ language: node_js
 node_js:
   - "12"
   - "10"
-# Temporal fix of TravisCI being blocked by npm by
-# forcing a new virtual env, thus a different ip more likely to be used.
-# https://docs.travis-ci.com/user/reference/overview/#sts=Virtualization%20environments
-sudo: required
